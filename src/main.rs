@@ -1,10 +1,10 @@
 mod response;
 
+use crate::response::*;
 use clap::Parser;
+use regex::Regex;
 use reqwest::{get, Error};
 use std::fs;
-use regex::Regex;
-use crate::response::*;
 
 #[derive(Parser, Debug)]
 #[clap(author)]
@@ -16,7 +16,10 @@ struct CLI {
 
 impl CLI {
     pub fn get_date(&self) -> String {
-        if Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap().is_match(&self.date) {
+        if Regex::new(r"\d{4}-\d{2}-\d{2}")
+            .unwrap()
+            .is_match(&self.date)
+        {
             format!("date={}&", self.date)
         } else {
             format!("date={}&", "0000-00-00")
@@ -49,12 +52,15 @@ fn get_type(url: &str) -> &str {
  * * resp - the response from the server with all the information
  */
 async fn parse_image(resp: Response) -> Result<(), Error> {
-
     let full_response = get(&resp.url).await?;
 
     if full_response.status().is_success() {
         let image_type = get_type(&resp.url);
-        fs::write(format!("files/{}.{}", resp.date, image_type), full_response.bytes().await?).expect(&format!("File could not be created: {resp:?}"));
+        fs::write(
+            format!("files/{}.{}", resp.date, image_type),
+            full_response.bytes().await?,
+        )
+        .expect(&format!("File could not be created: {resp:?}"));
     }
     Ok(())
 }
@@ -67,7 +73,8 @@ async fn make_request(body: &str, args: CLI) -> Result<(), Error> {
 
         let json: Response = serde_json::from_str(&response).unwrap();
 
-        fs::write(format!("files/{}", json.date), format!("{:?}", json)).expect("Could not create text-file");
+        fs::write(format!("files/{}", json.date), format!("{:?}", json))
+            .expect("Could not create text-file");
 
         if json.media_type == "image" {
             parse_image(json).await?;
