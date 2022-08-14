@@ -12,43 +12,85 @@ struct CLI {
     date: String,
 }
 
+impl CLI {
+    pub fn get_date(&self) -> String {
+        format!("date={}&", self.date)
+    }
+}
+
+/// Handles the response from the server, when it was a success
 #[derive(Serialize, Deserialize, Debug)]
 struct Response {
+    /// The date itself
     date: String,
+    /// The explanation for the picture
     explanation: String,
+    /// The HD url
     hdurl: String,
+    /// What type the media is
     media_type: String,
+    /// Who knows
     service_version: String,
+    /// The title of the piece
     title: String,
+    /// The URL to the picture
     url: String,
 }
 
+/// Handles the case for when an error is receieved
 #[derive(Serialize, Deserialize, Debug)]
 struct ErrorResponse {
+    /// The code recieved
     code: Number,
+    /// The message of why the error
     msg: String,
     service_version: String,
 }
 
+/**
+ * Used to get the type of the image from the url
+ * aka if the url has a .png, then it returns that
+ *
+ * ## Arguments
+ *
+ * * url - the url to split
+ *
+ * ## Return
+ *
+ * gets the last item after a dot
+ */
+fn get_type(url: &str) -> &str {
+    let ulrs: Vec<&str> = url.split('.').collect();
+    ulrs[ulrs.len() - 1]
+}
+
+/**
+ * Used to get the image from the response
+ *
+ * ## Arguments
+ *
+ * * resp - the response from the server with all the information
+ */
 async fn parse_image(resp: Response) -> Result<(), Error> {
 
-    let full_response = get(resp.url).await?;
+    let full_response = get(&resp.url).await?;
 
     if full_response.status().is_success() {
-        fs::write(resp.date + ".gif", full_response.bytes().await?).expect("File could not be created");
+        let image_type = get_type(&resp.url);
+        fs::write(format!("files/{}.{}", resp.date, image_type), full_response.bytes().await?).expect("File could not be created");
     }
     Ok(())
 }
 
 async fn make_request(body: &str, args: CLI) -> Result<(), Error> {
-    let full_response = get(body.to_string() + &args.date).await?;
+    let full_response = get(body.to_string() + &args.get_date()).await?;
 
     if full_response.status().is_success() {
         let response = full_response.text().await?;
 
         let json: Response = serde_json::from_str(&response).unwrap();
 
-        fs::write(format!("{}", json.date), format!("{:?}", json)).expect("Could not create text-file");
+        fs::write(format!("files/{}", json.date), format!("{:?}", json)).expect("Could not create text-file");
 
         parse_image(json).await?;
     } else {
