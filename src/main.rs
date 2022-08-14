@@ -2,12 +2,13 @@ use clap::Parser;
 use reqwest::{get, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{self, value::Number};
-use std::{env, fs::{self, File}};
+use std::fs;
 
 #[derive(Parser, Debug)]
 #[clap(author)]
 struct CLI {
-    #[clap(short, long)]
+    /// Which date to get the picture from
+    #[clap(value_parser)]
     date: String,
 }
 
@@ -39,8 +40,8 @@ async fn parse_image(resp: Response) -> Result<(), Error> {
     Ok(())
 }
 
-async fn make_request(body: &str, page: &str) -> Result<(), Error> {
-    let full_response = get(body.to_string() + page).await?;
+async fn make_request(body: &str, args: CLI) -> Result<(), Error> {
+    let full_response = get(body.to_string() + &args.date).await?;
 
     if full_response.status().is_success() {
         let response = full_response.text().await?;
@@ -61,12 +62,12 @@ async fn make_request(body: &str, page: &str) -> Result<(), Error> {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let args: Vec<String> = env::args().collect();
+    let args = CLI::parse();
 
     let text = fs::read_to_string("api_key").unwrap();
     let body = format!("https://api.nasa.gov/planetary/apod?api_key={}&", text);
 
-    make_request(&body, &args[1]).await?;
+    make_request(&body, args).await?;
 
     Ok(())
 }
