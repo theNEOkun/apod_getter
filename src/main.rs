@@ -21,9 +21,32 @@ impl CLI {
             .is_match(&self.date)
         {
             format!("date={}&", self.date)
+        } else if Regex::new(r"\w \d{2} \d{4}").unwrap().is_match(&self.date) {
+            let split_str: Vec<&str> = self.date.split(" ").collect();
+            let month = Self::match_month(&split_str[0]);
+            format!("date={}-{}-{}&", split_str[2], month, split_str[1])
         } else {
-            format!("date={}&", "0000-00-00")
+            format!("wrong")
         }
+    }
+
+    fn match_month(month: &str) -> String {
+        dbg!("{month}");
+        match &month.to_lowercase()[..] {
+            "january" | "jan" => "01",
+            "feburary" | "feb" => "02",
+            "march" | "mar" => "03",
+            "april" | "apr" => "04",
+            "may" => "05",
+            "june" | "jun" => "06",
+            "july" | "jul" => "07",
+            "august" | "aug" => "08",
+            "september" | "sep" => "09",
+            "oktober" | "okt" => "10",
+            "november" | "nov" => "11",
+            "december" | "doc" => "12",
+            _ => ""
+        }.to_string()
     }
 }
 
@@ -65,6 +88,13 @@ async fn parse_image(resp: Response) -> Result<(), Error> {
     Ok(())
 }
 
+/**
+ * Method used to make a request to a given url with the given arguments
+ *
+ * ## Arguments
+ * * body - the url to make the request to
+ * * args- the arguments to make the request with
+ */
 async fn make_request(body: &str, args: CLI) -> Result<(), Error> {
     let full_response = get(body.to_string() + &args.get_date()).await?;
 
