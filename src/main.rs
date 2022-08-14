@@ -51,10 +51,10 @@ async fn make_request(body: &str, page: &str) -> Result<(), Error> {
 async fn main() -> Result<(), Error> {
     let args: Vec<String> = env::args().collect();
 
-    let body =
-        "https://api.nasa.gov/planetary/apod?api_key=6wrs983OS2k0mSU7IWgSeuhoGt3aefu9xkZz5XMr&";
+    let text = fs::read_to_string("api_key").unwrap();
+    let body = format!("https://api.nasa.gov/planetary/apod?api_key={}&", text);
 
-    make_request(body, &args[1]).await?;
+    make_request(&body, &args[1]).await?;
 
     Ok(())
 }
