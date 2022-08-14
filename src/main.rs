@@ -2,7 +2,7 @@ use clap::Parser;
 use reqwest::{get, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{self, value::Number};
-use std::{env, fs};
+use std::{env, fs::{self, File}};
 
 #[derive(Parser, Debug)]
 #[clap(author)]
@@ -29,6 +29,16 @@ struct ErrorResponse {
     service_version: String,
 }
 
+async fn parse_image(resp: Response) -> Result<(), Error> {
+
+    let full_response = get(resp.url).await?;
+
+    if full_response.status().is_success() {
+        fs::write(resp.date + ".gif", full_response.bytes().await?).expect("File could not be created");
+    }
+    Ok(())
+}
+
 async fn make_request(body: &str, page: &str) -> Result<(), Error> {
     let full_response = get(body.to_string() + page).await?;
 
@@ -37,7 +47,9 @@ async fn make_request(body: &str, page: &str) -> Result<(), Error> {
 
         let json: Response = serde_json::from_str(&response).unwrap();
 
-        println!("{json:?}");
+        fs::write(format!("{}", json.date), format!("{:?}", json)).expect("Could not create text-file");
+
+        parse_image(json).await?;
     } else {
         let response: ErrorResponse = serde_json::from_str(&full_response.text().await?).unwrap();
 
