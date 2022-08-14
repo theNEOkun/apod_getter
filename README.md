@@ -10,4 +10,4 @@ This is a simple program written in rust that gets a Astronomical Picture of the
 
 One has to have an API key to be able to use the program.
 
-Supply it using the api_key-file. One can freely get one from ![nasa][https://api.nasa.gov/]
+Supply it using the api_key-file. One can freely get one from [nasa](https://api.nasa.gov/)
