@@ -1,9 +1,10 @@
+mod response;
+
 use clap::Parser;
 use reqwest::{get, Error};
-use serde::{Deserialize, Serialize};
-use serde_json::{self, value::Number};
-use std::{fs, fmt::Display};
+use std::fs;
 use regex::Regex;
+use crate::response::*;
 
 #[derive(Parser, Debug)]
 #[clap(author)]
@@ -15,45 +16,11 @@ struct CLI {
 
 impl CLI {
     pub fn get_date(&self) -> String {
-        format!("date={}&", self.date)
-    }
-}
-
-/// Handles the response from the server, when it was a success
-#[derive(Serialize, Deserialize, Debug)]
-struct Response {
-    /// The date itself
-    date: String,
-    /// The explanation for the picture
-    explanation: String,
-    /// The HD url
-    hdurl: String,
-    /// What type the media is
-    media_type: String,
-    /// Who knows
-    service_version: String,
-    /// The title of the piece
-    title: String,
-    /// The URL to the picture
-    url: String,
-}
-
-/// Handles the case for when an error is receieved
-#[derive(Serialize, Deserialize, Debug)]
-struct ErrorResponse {
-    /// The code recieved
-    code: Number,
-    /// The message of why the error
-    msg: String,
-    service_version: String,
-}
-
-impl Display for ErrorResponse {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "
-code: {},
-message: {},
-", self.code, self.msg)
+        if Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap().is_match(&self.date) {
+            format!("date={}&", self.date)
+        } else {
+            format!("date={}&", "0000-00-00")
+        }
     }
 }
 
@@ -87,7 +54,7 @@ async fn parse_image(resp: Response) -> Result<(), Error> {
 
     if full_response.status().is_success() {
         let image_type = get_type(&resp.url);
-        fs::write(format!("files/{}.{}", resp.date, image_type), full_response.bytes().await?).expect("File could not be created");
+        fs::write(format!("files/{}.{}", resp.date, image_type), full_response.bytes().await?).expect(&format!("File could not be created: {resp:?}"));
     }
     Ok(())
 }
@@ -102,7 +69,11 @@ async fn make_request(body: &str, args: CLI) -> Result<(), Error> {
 
         fs::write(format!("files/{}", json.date), format!("{:?}", json)).expect("Could not create text-file");
 
-        parse_image(json).await?;
+        if json.media_type == "image" {
+            parse_image(json).await?;
+        } else {
+            println!("Not an image");
+        }
     } else {
         let response: ErrorResponse = serde_json::from_str(&full_response.text().await?).unwrap();
 
