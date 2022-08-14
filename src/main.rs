@@ -2,7 +2,8 @@ use clap::Parser;
 use reqwest::{get, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::{self, value::Number};
-use std::fs;
+use std::{fs, fmt::Display};
+use regex::Regex;
 
 #[derive(Parser, Debug)]
 #[clap(author)]
@@ -45,6 +46,15 @@ struct ErrorResponse {
     /// The message of why the error
     msg: String,
     service_version: String,
+}
+
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "
+code: {},
+message: {},
+", self.code, self.msg)
+    }
 }
 
 /**
@@ -96,7 +106,7 @@ async fn make_request(body: &str, args: CLI) -> Result<(), Error> {
     } else {
         let response: ErrorResponse = serde_json::from_str(&full_response.text().await?).unwrap();
 
-        println!("{:?}", response);
+        println!("{}", response);
     }
 
     Ok(())
